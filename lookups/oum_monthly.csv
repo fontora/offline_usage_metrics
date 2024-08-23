@@ -1,0 +1,2 @@
+month,server,guids,version,"capacity_gb_max","usage_gb_max","warnings_sum","top_avg_usage_gb","sourcetypes_p90","forwarders_p90","searches_p90","page_views_p90","apps_p90","users_p90"
+"2024-07","splunk-aio.fontora.dev","[66BE4632-91FD-4A21-B760-075ADD49DCFD, F06A8BF7-4C8A-43F3-8D9E-412FB9127F4B]","9.2.1","50.00","0.03",0,"0.03",33,0,20,"49.00000000000001",3,"1.4000000000000004"

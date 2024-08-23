@@ -1,0 +1,320 @@
+<dashboard version="1.1" theme="dark">
+  <label>Offline Usage Metrics</label>
+  <!-- BASE SEARCH - LOOKUPS -->
+  <search id="bs_daily_lookup">
+    <query>| inputlookup oum_daily
+    </query>
+    <done>
+      <condition match="'job.resultCount'== 0">
+        <set token="tok_html_daily_download_sid">0</set>
+      </condition>
+      <condition>
+        <set token="tok_html_daily_download_sid">$job.sid$</set>
+      </condition>
+    </done>
+  </search>
+  <search id="bs_monthly_lookup">
+    <query>| inputlookup oum_monthly
+    </query>
+    <done>
+      <condition match="'job.resultCount'== 0">
+        <set token="tok_html_monthly_download_sid">0</set>
+      </condition>
+      <condition>
+        <set token="tok_html_monthly_download_sid">$job.sid$</set>
+      </condition>
+    </done>
+  </search>
+  <!-- HTML STATS -->
+  <search id="bs_html_daily">
+    <query>| tstats latest(PREFIX("run_time=")) AS duration, latest(PREFIX("dispatch_time=")) AS time WHERE index=_internal sourcetype=scheduler TERM("SavedSplunker") TERM("offline_usage_metrics") TERM("status=success") TERM("OUM") TERM("Gen") TERM("Daily") earliest=-14d@d
+| eval duration=round(duration, 2)
+| eval time=strftime(time, "%F %T")    
+    </query>
+    <done>
+      <condition match="'job.resultCount'== 0">
+        <set token="tok_html_daily_duration">N/A</set>
+        <set token="tok_html_daily_time">N/A</set>
+      </condition>
+      <condition>
+        <set token="tok_html_daily_duration">$result.duration$</set>
+        <set token="tok_html_daily_time">$result.time$</set>
+      </condition>
+    </done>
+  </search>
+  <search id="bs_html_daily_scheduled">
+    <query>| rest /servicesNS/-/offline_usage_metrics/saved/searches f=title f=next_scheduled_time 
+| search title="OUM Gen - Daily"
+| table next_scheduled_time 
+| eval time=strftime(time, "%F %T")    
+    </query>
+    <done>
+      <condition match="'job.resultCount'== 0">
+        <set token="tok_html_daily_scheduled">N/A</set>
+      </condition>
+      <condition>
+        <set token="tok_html_daily_scheduled">$result.next_scheduled_time$</set>
+      </condition>
+    </done>
+  </search>
+  <search id="bs_html_monthly">
+    <query>| tstats latest(PREFIX("run_time=")) AS duration, latest(PREFIX("dispatch_time=")) AS time WHERE index=_internal sourcetype=scheduler TERM("SavedSplunker") TERM("offline_usage_metrics") TERM("status=success") TERM("OUM") TERM("Gen") TERM("Monthly") earliest=-30d@d
+| eval duration=round(duration, 2)
+| eval time=strftime(time, "%F %T")    
+    </query>
+    <done>
+      <condition match="'job.resultCount'== 0">
+        <set token="tok_html_monthly_duration">N/A</set>
+        <set token="tok_html_monthly_time">N/A</set>
+      </condition>
+      <condition>
+        <set token="tok_html_monthly_duration">$result.duration$</set>
+        <set token="tok_html_monthly_time">$result.time$</set>
+      </condition>
+    </done>
+  </search>
+  <search id="bs_html_monthly_scheduled">
+    <query>| rest /servicesNS/-/offline_usage_metrics/saved/searches f=title f=next_scheduled_time 
+| search title="OUM Gen - Monthly"
+| table next_scheduled_time 
+| eval time=strftime(time, "%F %T")    
+    </query>
+    <done>
+      <condition match="'job.resultCount'== 0">
+        <set token="tok_html_monthly_scheduled">N/A</set>
+      </condition>
+      <condition>
+        <set token="tok_html_monthly_scheduled">$result.next_scheduled_time$</set>
+      </condition>
+    </done>
+  </search>
+  <!-- BASE SEARCHES  -->
+  <search id="bs_rolling">
+    <query>index="_internal" sourcetype="splunkd" source="*license_usage.log*" TERM("LicenseUsage") TERM("RolloverSummary") pool="*" stack!="fixed-sourcetype*" earliest=-30d@d
+| eval _time=_time - 43200 
+| bin _time span=1d 
+| stats latest(b) AS b by slave, pool, _time 
+| timechart span=1d sum(b) AS "volume" fixedrange=false 
+| join type=outer _time 
+    [ search index="_internal" sourcetype="splunkd" source="*license_usage.log*" TERM("LicenseUsage") TERM("RolloverSummary") pool="*" stack!="fixed-sourcetype*" earliest=-30d@d 
+    | eval _time=_time - 43200 
+    | bin _time span=1d 
+    | dedup _time stack 
+    | stats sum(stacksz) AS stacksz by _time] 
+| fields - _timediff 
+    </query>
+    <earliest>0</earliest>
+    <latest></latest>
+  </search>
+  <search id="bs_daily" base="bs_daily_lookup">
+    <query>| eval _time=strptime(day, "%Y-%m-%d") 
+| sort - _time
+| head 120 
+  </query>
+  </search>
+  <search id="bs_monthly" base="bs_monthly_lookup"></search>
+  <row id="html_preamble">
+    <panel>
+      <html>
+        <style>
+          #rolling_75 {
+            width:75% !important;
+          }
+          #rolling_25 {
+            width:25% !important;
+          }          
+          #daily_75 {
+            width:75% !important;
+          }
+          #daily_25 {
+            width:25% !important;
+          }
+          #monthly_75 {
+            width:75% !important;
+          }
+          #monthly_25 {
+            width:25% !important;
+          }
+          hr#sep {
+            border: 10px solid grey;
+            border-radius: 5px;
+          }
+        </style>
+
+        <h1 style="color:#72bcd4;">Rolling 30 Days</h1>
+        <p>This data is generated live from "_internal" index, which by default is restricted to users with the "admin" role.
+        </p>
+        <h1 style="color:#72bcd4;">Daily Report</h1>
+        <p>This data is generated on a daily basis. On first install the graph and statistics under "Last 120 Days" will be empty until the daily search runs:
+        </p>
+        <table>
+          <tr>
+            <td>        
+              <ul>
+                <li>Last generated: $tok_html_daily_time$ (took $tok_html_daily_duration$ seconds)</li>
+                <li>Daily statistics are scheduled to run at: $tok_html_daily_scheduled$</li>
+              </ul>
+            </td>
+            <td style="padding-left:30px;vertical-align:top;">
+              <a class="btn btn-primary" role="button" href="/api/search/jobs/$tok_html_daily_download_sid$/results?isDownload=true&amp;timeFormat=%25FT%25T.%25Q%25%3Az&amp;maxLines=0&amp;count=0&amp;filename=splunk_daily_stats.csv&amp;outputMode=csv">Download Daily Stats</a>
+            </td>
+          </tr>
+        </table>
+        <h1 style="color:#72bcd4;">Monthly Report</h1>
+        <p>This data is generated on a monthly basis, summarising the daily reports. On first install the graph and statistics under "All of Time - Monthly Breakdown" will be empty until the monthly search runs:
+        </p>
+        <table>
+          <tr>
+            <td>         
+              <ul>
+                <li>Last generated: $tok_html_monthly_time$ (took $tok_html_monthly_duration$ seconds)</li>
+                <li>Daily statistics are scheduled to run at: $tok_html_monthly_scheduled$</li>
+              </ul>
+            </td>
+            <td style="padding-left:30px;vertical-align:top;">
+              <a class="btn btn-primary" role="button" href="/api/search/jobs/$tok_html_monthly_download_sid$/results?isDownload=true&amp;timeFormat=%25FT%25T.%25Q%25%3Az&amp;maxLines=0&amp;count=0&amp;filename=slunk_monthly_stats.csv&amp;outputMode=csv">Download Monthly Stats</a>
+            </td>
+          </tr>
+        </table>
+      </html>
+    </panel>
+  </row>
+  <row id="html_rolling">
+    <panel>
+      <html>
+      <h1>Rolling 30 Days</h1>
+       <hr id="sep"/>
+    </html>
+    </panel>
+  </row>
+  <row id="row_rolling">
+    <panel id="rolling_75">
+      <title>License Usage</title>
+      <chart>
+        <search base="bs_rolling">
+          <query>| foreach volume, stacksz 
+    [ eval &lt;&lt;FIELD&gt;&gt;=round('&lt;&lt;FIELD&gt;&gt;'/1024/1024/1024, 2)]
+| rename volume AS "Usage (GiB)", stacksz AS "License Capacity (GiB)"</query>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.overlayFields">"License Capacity (GiB)"</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel id="rolling_25">
+      <title>Stats</title>
+      <table>
+        <search base="bs_rolling">
+          <query>| sort -volume 
+| streamstats count AS row 
+| eventstats avg(eval(if(row&lt;=6, volume, null()))) AS top_avg_usage_bytes 
+| stats max(stacksz) AS capacity_bytes, max(volume) AS usage_bytes_max, values(top_avg_usage_bytes) AS top_avg_usage_bytes 
+
+| foreach capacity_bytes, usage_bytes_max, top_avg_usage_bytes
+    [ eval &lt;&lt;FIELD&gt;&gt;=round('&lt;&lt;FIELD&gt;&gt;'/1024/1024/1024, 2)] 
+| rename capacity_bytes AS "License Capacity (GiB)", usage_bytes_max AS "Max Usage (GiB)", top_avg_usage_bytes AS "Top 20% Average Usage (GiB)"
+
+| transpose column_name="Metric" 
+| rename "row 1" AS "Value"</query>
+        </search>
+        <option name="count">30</option>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </table>
+    </panel>
+  </row>
+  <row id="html_daily">
+    <panel>
+      <html>
+      <h1>Last 120 Days</h1>
+       <hr id="sep"/>
+    </html>
+    </panel>
+  </row>
+  <row id="row_daily">
+    <panel id="daily_75">
+      <title>License Usage</title>
+      <chart>
+        <search base="bs_daily">
+          <query>| sort -usage_gb 
+| streamstats count AS row 
+| eventstats avg(eval(if(row&lt;=6, usage_gb, null()))) AS top_avg_usage_gb
+| timechart span=1d values(usage_gb) AS usage_gb, values(top_avg_usage_gb) AS top_avg_usage_gb, max(capacity_gb) AS capacity_gb
+| eval top_avg_usage_gb=round(top_avg_usage_gb, 2)
+| rename usage_gb AS "Usage (GiB)", top_avg_usage_gb AS "Average of Top 6 Days (GiB)", capacity_gb AS "License Capacity (GiB)"</query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">-45</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.overlayFields">"Average of Top 6 Days (GiB)","License Capacity (GiB)"</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">top</option>
+        <option name="height">349</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel id="daily_25">
+      <title>Stats</title>
+      <table>
+        <search base="bs_daily">
+          <query>| stats max(apps) AS apps, max(forwarders) AS forwarders, max(page_views) AS page_views, max(searches) AS searches, max(sourcetypes) AS sourcetypes, max(users) AS users, sum(warnings) AS warnings, values(version) AS version
+| rename apps AS "Apps (max)", forwarders AS "Forwarders (max)", page_views AS "Page Views (max)", searches AS "# of Searches (max)", sourcetypes AS "Sourcetypes (max)", users AS "Users (max)", warnings AS "Warnings (sum)", version AS "Version(s)"
+| transpose column_name="Metric"
+| rename "row 1" AS "Value"</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="number" field="Value">
+          <option name="precision">0</option>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row id="html_monthly">
+    <panel>
+      <html>
+      <h1>All of Time - Monthly Breakdown</h1>
+       <hr id="sep"/>
+    </html>
+    </panel>
+  </row>
+  <row id="row_monthly">
+    <panel id="monthly_75">
+      <title>License Usage</title>
+      <chart>
+        <search base="bs_monthly">
+          <query>| eval _time=strptime(month."-01", "%Y-%m-%d")
+| timechart span=1mon values(capacity_gb_max) AS capacity_gb_max, values(top_avg_usage_gb) AS top_avg_usage_gb, values(usage_gb_max) AS usage_gb_max
+| foreach capacity_gb, usage_gb
+    [ eval &lt;&lt;FIELD&gt;&gt;='&lt;&lt;FIELD&gt;&gt;'/1024/1024/1024]
+| rename capacity_gb_max AS "License Capacity (GiB)", top_avg_usage_gb AS "Top 20% Average (GiB)", usage_gb_max AS "Max Usage (GiB)"</query>
+        </search>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.overlayFields">"License Capacity (GiB)"</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel id="monthly_25">
+      <title>Stats</title>
+      <table>
+        <search base="bs_monthly">
+          <query>| stats max(apps_p90) AS apps, max(forwarders_p90) AS forwarders, max(page_views_p90) AS page_views, max(searches_p90) AS searches, max(sourcetypes_p90) AS sourcetypes, max(users_p90) AS users, sum(warnings_sum) AS warnings, values(version) AS version 
+| rename apps AS "Apps (max)", forwarders AS "Forwarders (max)", page_views AS "Page Views (max)", searches AS "# of Searches (max)", sourcetypes AS "Sourcetypes (max)", users AS "Users (max)", warnings AS "Warnings (sum)", version AS "Version(s)" 
+| transpose column_name="Metric" 
+| rename "row 1" AS "Value"</query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+        <format type="number" field="Value">
+          <option name="precision">0</option>
+        </format>
+      </table>
+    </panel>
+  </row>
+</dashboard>

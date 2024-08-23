@@ -1,0 +1,10 @@
+<nav search_view="search" color="#330072">
+  <collection label="Reports">
+    <saved name="Offline Usage Metrics - Daily" />
+    <saved name="Offline Usage Metrics - Monthly" />
+  </collection>
+  <collection label="Dashboards">
+    <view name="oum_statistics" default="true" />
+    <view name="oum_example" />
+  </collection>
+</nav>

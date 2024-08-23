@@ -1,0 +1,13 @@
+[]
+access = read : [ * ], write : [ admin ]
+export = system
+
+[savedsearches/OUM%20Gen%20-%20Daily]
+access = read : [ admin ], write : [ admin ]
+export = none
+owner = nobody
+
+[savedsearches/OUM%20Gen%20-%20Monthly]
+access = read : [ admin ], write : [ admin ]
+export = none
+owner = nobody
