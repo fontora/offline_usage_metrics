@@ -87,7 +87,7 @@
               </ul>
             </td>
             <td style="padding-left:30px;vertical-align:top;">
-              <a class="btn btn-primary" role="button" href="/api/search/jobs/$tok_html_daily_download_sid$/results?isDownload=true&amp;timeFormat=%25FT%25T.%25Q%25%3Az&amp;maxLines=0&amp;count=0&amp;filename=splunk_daily_stats.csv&amp;outputMode=csv">Download Daily Stats</a>
+              <a class="btn btn-primary" role="button" href="/api/search/jobs/$tok_html_daily_download_sid$/results?isDownload=true&amp;timeFormat=%25FT%25T.%25Q%25%3Az&amp;maxLines=0&amp;count=0&amp;filename=splunk_daily_stats&amp;outputMode=csv">Download Daily Stats</a>
             </td>
           </tr>
         </table>
@@ -101,7 +101,7 @@
               </ul>
             </td>
             <td style="padding-left:30px;vertical-align:top;">
-              <a class="btn btn-primary" role="button" href="/api/search/jobs/$tok_html_monthly_download_sid$/results?isDownload=true&amp;timeFormat=%25FT%25T.%25Q%25%3Az&amp;maxLines=0&amp;count=0&amp;filename=slunk_monthly_stats.csv&amp;outputMode=csv">Download Monthly Stats</a>
+              <a class="btn btn-primary" role="button" href="/api/search/jobs/$tok_html_monthly_download_sid$/results?isDownload=true&amp;timeFormat=%25FT%25T.%25Q%25%3Az&amp;maxLines=0&amp;count=0&amp;filename=splunk_monthly_stats&amp;outputMode=csv">Download Monthly Stats</a>
             </td>
           </tr>
         </table>
