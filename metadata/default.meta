@@ -11,3 +11,8 @@ owner  = nobody
 access = read : [ admin ], write : [ admin ]
 export = none
 owner  = nobody
+
+[macros/oum_environment]
+access = read : [ * ], write : [ admin ]
+export = none
+owner = nobody

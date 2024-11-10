@@ -155,7 +155,7 @@
   <row id="html_daily">
     <panel>
       <html>
-      <h1>Last 120 Days</h1>
+      <h1>Last 120 Days (Live Data)</h1>
        <hr id="sep"/>
     </html>
     </panel>
